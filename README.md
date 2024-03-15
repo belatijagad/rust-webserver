@@ -86,3 +86,83 @@ The server will slowly be jammed if many users received slow response. In that c
 A thread pool is a group of spawned threads that are waiting and ready to handle a task. When the program receives a new task, it assigns one of the threads in the pool to the task, and that thread will process the task. The remaining threads in the pool are available to handle any other tasks that come in while the first thread is processing. 
 
 When the first thread is done processing its task, it’s returned to the pool of idle threads, ready to handle a new task. A thread pool allows the server to process connections concurrently, increasing the throughput of the server.
+
+## (Bonus) Replace `new` with `build`
+Within the tutorial book, we were challenged to replace the `new` method with `build` method that returns `Result<ThreadPool, PoolCreationError>`. The intention here is to replace the unrecoverable error from `assert!` macro with something that can describe the error, probably.
+
+```rust
+impl ThreadPool {
+    pub fn new(size: usize) -> ThreadPool {
+        assert!(size > 0);
+        // --snip--
+    }
+    // --snip--
+}
+```
+To do so, I replace the `new` method with `build`, following the guide from the website. After that, I change the condition so if the size is `<=0`, then it will return an error of `InvalidSize`.
+
+```rust
+impl ThreadPool {
+    pub fn build(size: usize) -> Result<ThreadPool, PoolCreationError> {
+        if size <= 0 {
+            return Err(PoolCreationError::InvalidSize);
+        }
+        // --snip--
+    }
+    // --snip--
+}
+```
+
+Of course, I need to define what the error is. So I made an enum along with the display format for the errors in `PoolCreationError`. So far, I only made one only, that is for the `InvalidSize`.
+
+```rust
+use std::{
+    // --snip--
+    error,
+    fmt,
+};
+
+#[derive(Debug)]
+pub enum PoolCreationError {
+    InvalidSize,
+}
+
+impl fmt::Display for PoolCreationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            PoolCreationError::InvalidSize => write!(f, "Invalid pool size provided"),
+        }
+    }
+}
+
+impl error::Error for PoolCreationError {}
+```
+
+A little tweaking is needed since the return type from the `build` method is different from the `new`. So the `pool` will be returned if and only if there are no error occured. If there are any errors, then the error message will be send and the program will be stopped.
+
+```rust
+fn main() {
+    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let pool_result = ThreadPool::build(4);
+
+    let pool = match pool_result {
+        Ok(pool) => pool,
+        Err(err) => {
+            eprintln!("Failed to create thread pool: {}", err);
+            return;
+        }
+    };
+
+    for stream in listener.incoming() {
+        let stream = stream.unwrap();
+
+        pool.execute(|| {
+            handle_connection(stream);
+        });
+    }
+}
+```
+
+Here's the example output when `InvalidSize` is triggered.
+
+![Bonus](docs/bonus.png)
