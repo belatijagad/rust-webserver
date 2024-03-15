@@ -19,7 +19,7 @@ At first, the modules `std::io::prelude` and `std::io::BufReader` are imported t
 
 The browser signal signals the end of HTTP request by sending two newline characters in a row, so to get one request from the stream, new lines will be taken until a line with empty string is gotten.
 
-## Commit 2:
+## Commit 2: Response in `handle_connection`
 ```rust
 fn handle_connection(mut stream: TcpStream) {
     // -- snip --
@@ -40,3 +40,39 @@ The module `fs` is added to bring the standard library's filesystem into scope. 
 Currently, the request data in `http_request` is ignored, so the `index.html` is sent unconditionally. Because of that, Rust shows this warning on compile time:
 
 ![Commit 2](docs/commit2.png)
+
+## Commit 3: Selectively Responding
+To split between response, `request_line`'s value need to be checked. Successful `GET` request will have their own `request_line`.
+
+```rust
+// --snip--
+fn handle_connection(mut stream: TcpStream) {
+    let buf_reader = BufReader::new(&mut stream);
+    let request_line = buf_reader.lines().next().unwrap().unwrap();
+
+    if request_line == "GET / HTTP/1.1" {
+        // declare status_line, content, length, response for successful case
+    } else {
+        // declare status_line, content, length, response for unsuccessful case
+    }
+    // --snip--
+}
+```
+
+The refactoring part is simple. Because on each branch, the same variables will be declared, then just use tuples to declare the two variables, that are `status_line` and `filename` based on the `request_line`. Then the `content` and `length` would only need to be written once. Hence, making the code cleaner.
+
+```rust
+fn handle_connection(mut stream: TcpStream) {
+    // --snip--
+
+    let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
+        ("HTTP/1.1 200 OK", "hello.html")
+    } else {
+        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    };
+
+    // --snip--
+}
+```
+
+![Commit 3](docs/commit3.png)
