@@ -81,3 +81,8 @@ fn handle_connection(mut stream: TcpStream) {
 The server is only singlethreaded at the moment, so it could only serve one response at a time. It's a first come first served system, so it doesn't matter how long the time will take to serve a response, as long as they come first, they will be served first.
 
 The server will slowly be jammed if many users received slow response. In that case, multithreading is needed to serve multiple users at once.
+
+## Commit 5: Multithreaded Server
+A thread pool is a group of spawned threads that are waiting and ready to handle a task. When the program receives a new task, it assigns one of the threads in the pool to the task, and that thread will process the task. The remaining threads in the pool are available to handle any other tasks that come in while the first thread is processing. 
+
+When the first thread is done processing its task, it’s returned to the pool of idle threads, ready to handle a new task. A thread pool allows the server to process connections concurrently, increasing the throughput of the server.
