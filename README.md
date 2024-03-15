@@ -1,4 +1,4 @@
-# Rust
+# Rust Multithreaded Server Miniproject
 
 ## Commit 1: What does `handle_connection` do?
 ```rust
@@ -76,3 +76,8 @@ fn handle_connection(mut stream: TcpStream) {
 ```
 
 ![Commit 3](docs/commit3.png)
+
+## Commit 4: Slow Response Simulation
+The server is only singlethreaded at the moment, so it could only serve one response at a time. It's a first come first served system, so it doesn't matter how long the time will take to serve a response, as long as they come first, they will be served first.
+
+The server will slowly be jammed if many users received slow response. In that case, multithreading is needed to serve multiple users at once.
